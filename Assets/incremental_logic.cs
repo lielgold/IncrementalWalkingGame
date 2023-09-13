@@ -20,12 +20,15 @@ public class game_logic : MonoBehaviour
     public TextMeshProUGUI time_text;
     public TextMeshProUGUI steps_text;
 
-    public InputAction stepAction;
-    //public int steps;
-    private int prev_steps_value=0;
-    private int base_steps_value;
-    private bool _initial_steps_value_was_set=false;
-    private int steps_since_game_started = 0;
+    public InputAction stepAction;    
+    private int prev_steps_value=0; // AndroidStepCounter.current.stepCounter.ReadValue() - prev_steps_value = number of steps the player walked since last time we checked
+
+    //AndroidStepCounter.current.stepCounter.ReadValue() returns the total number of steps since phone was turned on
+    // we want to ignore the first steps made before the game was started
+    private int base_steps_value; // the number of steps made before the game was started
+    private bool _initial_steps_value_was_set=false; //flag that base_steps_value was set
+
+    private int steps_since_game_started = 0; // total steps since the game was first started, due to api limits this will have issus if the player restarts his phone
 
     public TextMeshProUGUI steps_since_start_text;
     private int gold=0;
@@ -35,10 +38,8 @@ public class game_logic : MonoBehaviour
     public TextMeshProUGUI gold_per_step_text;
     public TextMeshProUGUI base_step_value_text;
 
-    int _game_was_ran_before = 0; // indicates that this is the first time the player opens the game    
-
     
-    ///  buyable trees, orchards, forests logic    
+    ///  object the player buys - trees, orchards, forests
     public UnityEngine.UI.Button buy_tree_button;
     public TextMeshProUGUI buy_tree_button_text;
     private int apple_trees = 0;
@@ -61,7 +62,7 @@ public class game_logic : MonoBehaviour
     public TextMeshProUGUI win_game_button_text;
     private int win_game_cost = 500000;
     private bool won_game= false;
-    /// end buyable trees, orchards, forests logic
+    
 
     private int gold_per_step = 1;
     private int increment_per_click = 1;
@@ -70,33 +71,16 @@ public class game_logic : MonoBehaviour
     void Awake()
     {
         AndroidRuntimePermissions.RequestPermission("android.permission.ACTIVITY_RECOGNITION");
-
-        //_game_was_ran_before = PlayerPrefs.GetInt("_game_was_ran_before");
-
-        //if (_game_was_ran_before == 0)
-        //{
-        //    // initialize game
-        //    //InputSystem.EnableDevice(AndroidStepCounter.current);
-        //    //AndroidStepCounter.current.MakeCurrent();
-        //    //base_steps_value = AndroidStepCounter.current.stepCounter.ReadValue();
-        //    //gold = -base_steps_value;
-        //}
-        //else{
-        //    LoadGameData();
-        //}
-        //_game_was_ran_before = 1;
-        //PlayerPrefs.SetInt("_game_was_ran_before", _game_was_ran_before);        
-
     }
 
 
     // Start is called before the first frame update
     void Start()
-    {
-        LoadGameData();
+    {        
         InputSystem.EnableDevice(AndroidStepCounter.current);
         AndroidStepCounter.current.MakeCurrent();
-        //prev_steps_value = AndroidStepCounter.current.stepCounter.ReadValue();        
+        LoadGameData();
+        UpdateGui();
 
         if (AndroidRuntimePermissions.CheckPermission("android.permission.ACTIVITY_RECOGNITION"))
         {            
@@ -114,17 +98,6 @@ public class game_logic : MonoBehaviour
     {
         TimeSpan time_passed = DateTime.Now - last_update_time;
 
-        // set initial steps value late to avoid a bug where AndroidStepCounter.current.stepCounter.ReadValue() returns 0 because it hasn't started working yet
-        //if (!_initial_steps_value_was_set && time_passed.TotalSeconds > 20)
-        //{
-        //    base_steps_value = AndroidStepCounter.current.stepCounter.ReadValue();
-        //    base_step_value_text.text = base_steps_value.ToString();
-        //    _initial_steps_value_was_set = true;
-        //    gold = -base_steps_value;
-        //    steps_since_game_started = -base_steps_value;
-        //    return;
-        //}
-
             // Compare the time passed with a TimeSpan representing 1 second
         if (time_passed.TotalSeconds > 1)
         {            
@@ -135,7 +108,7 @@ public class game_logic : MonoBehaviour
             UpdateGui();
         }
 
-        //disable / enable buttons
+        // disable / enable buttons
         if (gold > GetTreeBuyCost()) buy_tree_button.enabled = true;
         else buy_tree_button.enabled = false;
         if (gold > GetGroveBuyCost()) buy_grove_button.enabled = true;
@@ -163,6 +136,7 @@ public class game_logic : MonoBehaviour
         else
         {
             steps_since_game_started += AndroidStepCounter.current.stepCounter.ReadValue() - prev_steps_value;
+            UpdateGoldPerStep();
             gold += (AndroidStepCounter.current.stepCounter.ReadValue() - prev_steps_value) * gold_per_step;
             prev_steps_value = AndroidStepCounter.current.stepCounter.ReadValue();
         }
@@ -205,6 +179,8 @@ public class game_logic : MonoBehaviour
 
         if(_initial_steps_value_was_set) PlayerPrefs.SetInt("base_steps_value", base_steps_value);
 
+        
+        PlayerPrefs.SetInt("steps_since_game_started", steps_since_game_started);
         PlayerPrefs.SetInt("prev_steps_value", prev_steps_value);        
 
         PlayerPrefs.Save();
@@ -216,9 +192,6 @@ public class game_logic : MonoBehaviour
         apple_trees = PlayerPrefs.GetInt("apple_trees");
         apple_groves = PlayerPrefs.GetInt("apple_groves");
         apple_forests = PlayerPrefs.GetInt("apple_forests");
-        //apple_trees_cost = PlayerPrefs.GetInt("apple_trees_cost");
-        //apple_groves_cost = PlayerPrefs.GetInt("apple_groves_cost");
-        //apple_forests_cost = PlayerPrefs.GetInt("apple_forests_cost");
 
         int intValue = PlayerPrefs.GetInt("won_game"); // PlayerPrefs has no bool
         won_game = intValue == 1;
@@ -227,13 +200,10 @@ public class game_logic : MonoBehaviour
         if (_initial_steps_value_was_set)
         {
             base_steps_value = PlayerPrefs.GetInt("base_steps_value");
-            //gold = -base_steps_value;
-            //steps_since_game_started = -base_steps_value;
         }
 
-        prev_steps_value = PlayerPrefs.GetInt("prev_steps_value");
-
-
+        steps_since_game_started = PlayerPrefs.GetInt("steps_since_game_started");
+        prev_steps_value = PlayerPrefs.GetInt("prev_steps_value");        
 
         UpdateGoldPerStep();
     }
@@ -265,8 +235,7 @@ public class game_logic : MonoBehaviour
     public void BuyAppleTree()
     {
         gold -= GetTreeBuyCost();
-        apple_trees++;        
-        //apple_trees_cost = (int)(apple_trees_cost*1.1);
+        apple_trees++;                
         UpdateGoldPerStep();
         UpdateGui();
     }
@@ -275,8 +244,7 @@ public class game_logic : MonoBehaviour
     public void BuyAppleGrove()
     {
         gold -= GetGroveBuyCost();
-        apple_groves++;        
-        //apple_groves_cost = (int)(apple_groves_cost * 1.1);
+        apple_groves++;                
         UpdateGoldPerStep();
         UpdateGui();
     }
@@ -286,8 +254,7 @@ public class game_logic : MonoBehaviour
     {
         
         gold -= GetForestsBuyCost();
-        apple_forests++;
-        //apple_forests_cost = (int)(apple_forests_cost * 1.1);
+        apple_forests++;        
         UpdateGoldPerStep();
         UpdateGui();
     }
@@ -299,7 +266,7 @@ public class game_logic : MonoBehaviour
         UpdateGui();
     }
 
-    //// end button logic
+    //// end building button logic
 
     // get cost of buying a building
     private int GetTreeBuyCost()
@@ -314,7 +281,7 @@ public class game_logic : MonoBehaviour
     {
         return (int) (apple_forests_cost * (float)Math.Pow(1.1, apple_forests));
     }
-    // end cost of buying a building
+    
 
 
 
@@ -323,9 +290,6 @@ public class game_logic : MonoBehaviour
     {
         gold_per_step = 1;
         gold_per_step += apple_trees * 1 + apple_groves * 5 + apple_forests * 25;
-
-        //increment_per_click = 1;
-        //increment_per_click += apple_trees * 1 + apple_groves * 5 + apple_forests * 25;        
     }
 
 
