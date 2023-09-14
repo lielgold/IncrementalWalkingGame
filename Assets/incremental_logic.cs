@@ -22,12 +22,15 @@ public class game_logic : MonoBehaviour
 
     public InputAction stepAction;
     //public int steps;
-    private int prev_steps_value=0;
-    private int base_steps_value;
-    private bool _initial_steps_value_was_set=false;
+    private int prev_steps_value=0; // AndroidStepCounter.current.stepCounter.ReadValue() - prev_steps_value = number of steps the player walked since last time we checked
+
+    //AndroidStepCounter.current.stepCounter.ReadValue() returns the total number of steps since phone was turned on
+    // we want to ignore the first steps made before the game was started
+    private int base_steps_value; // the number of steps made before the game was started
+    private bool _initial_steps_value_was_set=false; //flag that base_steps_value was set
     private int steps_since_game_started = 0;
 
-    public TextMeshProUGUI steps_since_start_text;
+    public TextMeshProUGUI steps_since_start_text; // total steps since the game was first started, due to api limits this will have issus if the phone is restarted (true on android and ios)
     private int gold=0;
 
     public TextMeshProUGUI permission_text;
@@ -37,8 +40,8 @@ public class game_logic : MonoBehaviour
 
     int _game_was_ran_before = 0; // indicates that this is the first time the player opens the game    
 
-    
-    ///  buyable trees, orchards, forests logic    
+
+    ///  object the player buys - trees, orchards, forests
     public UnityEngine.UI.Button buy_tree_button;
     public TextMeshProUGUI buy_tree_button_text;
     private int apple_trees = 0;
@@ -61,7 +64,7 @@ public class game_logic : MonoBehaviour
     public TextMeshProUGUI win_game_button_text;
     private int win_game_cost = 500000;
     private bool won_game= false;
-    /// end buyable trees, orchards, forests logic
+    
 
     private int gold_per_step = 1;
     private int increment_per_click = 1;
@@ -71,22 +74,6 @@ public class game_logic : MonoBehaviour
     {
         AndroidRuntimePermissions.RequestPermission("android.permission.ACTIVITY_RECOGNITION");
 
-        //_game_was_ran_before = PlayerPrefs.GetInt("_game_was_ran_before");
-
-        //if (_game_was_ran_before == 0)
-        //{
-        //    // initialize game
-        //    //InputSystem.EnableDevice(AndroidStepCounter.current);
-        //    //AndroidStepCounter.current.MakeCurrent();
-        //    //base_steps_value = AndroidStepCounter.current.stepCounter.ReadValue();
-        //    //gold = -base_steps_value;
-        //}
-        //else{
-        //    LoadGameData();
-        //}
-        //_game_was_ran_before = 1;
-        //PlayerPrefs.SetInt("_game_was_ran_before", _game_was_ran_before);        
-
     }
 
 
@@ -95,8 +82,7 @@ public class game_logic : MonoBehaviour
     {
         LoadGameData();
         InputSystem.EnableDevice(AndroidStepCounter.current);
-        AndroidStepCounter.current.MakeCurrent();
-        //prev_steps_value = AndroidStepCounter.current.stepCounter.ReadValue();        
+        AndroidStepCounter.current.MakeCurrent();        
 
         if (AndroidRuntimePermissions.CheckPermission("android.permission.ACTIVITY_RECOGNITION"))
         {            
@@ -114,18 +100,7 @@ public class game_logic : MonoBehaviour
     {
         TimeSpan time_passed = DateTime.Now - last_update_time;
 
-        // set initial steps value late to avoid a bug where AndroidStepCounter.current.stepCounter.ReadValue() returns 0 because it hasn't started working yet
-        //if (!_initial_steps_value_was_set && time_passed.TotalSeconds > 20)
-        //{
-        //    base_steps_value = AndroidStepCounter.current.stepCounter.ReadValue();
-        //    base_step_value_text.text = base_steps_value.ToString();
-        //    _initial_steps_value_was_set = true;
-        //    gold = -base_steps_value;
-        //    steps_since_game_started = -base_steps_value;
-        //    return;
-        //}
-
-            // Compare the time passed with a TimeSpan representing 1 second
+        // Compare the time passed with a TimeSpan representing 1 second
         if (time_passed.TotalSeconds > 1)
         {            
             last_update_time = DateTime.Now; // Update lastUpdateTime for the next comparison
@@ -150,7 +125,7 @@ public class game_logic : MonoBehaviour
     void UpdateStepsNumber()
     {
         // for some reason AndroidStepCounter.current.stepCounter.ReadValue() returns 0 for the first few seconds, which causes a bug when setting the initial step value
-        // there's no reason for it to ever return 0, so this line AndroidStepCounter.current.stepCounter.ReadValue()!=0 avoids the bug
+        // there's no reason for it to ever return 0, so this line AndroidStepCounter.current.stepCounter.ReadValue()!=0 dodges the bug
         if (_initial_steps_value_was_set == false && AndroidStepCounter.current.stepCounter.ReadValue()!=0)
         {
             base_steps_value = AndroidStepCounter.current.stepCounter.ReadValue();
@@ -216,9 +191,6 @@ public class game_logic : MonoBehaviour
         apple_trees = PlayerPrefs.GetInt("apple_trees");
         apple_groves = PlayerPrefs.GetInt("apple_groves");
         apple_forests = PlayerPrefs.GetInt("apple_forests");
-        //apple_trees_cost = PlayerPrefs.GetInt("apple_trees_cost");
-        //apple_groves_cost = PlayerPrefs.GetInt("apple_groves_cost");
-        //apple_forests_cost = PlayerPrefs.GetInt("apple_forests_cost");
 
         int intValue = PlayerPrefs.GetInt("won_game"); // PlayerPrefs has no bool
         won_game = intValue == 1;
@@ -227,14 +199,9 @@ public class game_logic : MonoBehaviour
         if (_initial_steps_value_was_set)
         {
             base_steps_value = PlayerPrefs.GetInt("base_steps_value");
-            //gold = -base_steps_value;
-            //steps_since_game_started = -base_steps_value;
         }
 
         prev_steps_value = PlayerPrefs.GetInt("prev_steps_value");
-
-
-
         UpdateGoldPerStep();
     }
 
@@ -265,8 +232,7 @@ public class game_logic : MonoBehaviour
     public void BuyAppleTree()
     {
         gold -= GetTreeBuyCost();
-        apple_trees++;        
-        //apple_trees_cost = (int)(apple_trees_cost*1.1);
+        apple_trees++;                
         UpdateGoldPerStep();
         UpdateGui();
     }
@@ -275,8 +241,7 @@ public class game_logic : MonoBehaviour
     public void BuyAppleGrove()
     {
         gold -= GetGroveBuyCost();
-        apple_groves++;        
-        //apple_groves_cost = (int)(apple_groves_cost * 1.1);
+        apple_groves++;                
         UpdateGoldPerStep();
         UpdateGui();
     }
@@ -286,8 +251,7 @@ public class game_logic : MonoBehaviour
     {
         
         gold -= GetForestsBuyCost();
-        apple_forests++;
-        //apple_forests_cost = (int)(apple_forests_cost * 1.1);
+        apple_forests++;        
         UpdateGoldPerStep();
         UpdateGui();
     }
@@ -299,7 +263,6 @@ public class game_logic : MonoBehaviour
         UpdateGui();
     }
 
-    //// end button logic
 
     // get cost of buying a building
     private int GetTreeBuyCost()
@@ -314,18 +277,13 @@ public class game_logic : MonoBehaviour
     {
         return (int) (apple_forests_cost * (float)Math.Pow(1.1, apple_forests));
     }
-    // end cost of buying a building
 
 
-
-    // update how much gold you get per step
+    // update how much gold the player gets per step
     private void UpdateGoldPerStep()
     {
         gold_per_step = 1;
         gold_per_step += apple_trees * 1 + apple_groves * 5 + apple_forests * 25;
-
-        //increment_per_click = 1;
-        //increment_per_click += apple_trees * 1 + apple_groves * 5 + apple_forests * 25;        
     }
 
 
