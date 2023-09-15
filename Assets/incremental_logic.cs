@@ -17,8 +17,6 @@ using Unity.VisualScripting;
 public class game_logic : MonoBehaviour
 {   
     DateTime last_update_time = DateTime.Now;
-    public TextMeshProUGUI time_text;
-    public TextMeshProUGUI steps_text;
 
     public InputAction stepAction;
     //public int steps;
@@ -33,12 +31,9 @@ public class game_logic : MonoBehaviour
     public TextMeshProUGUI steps_since_start_text; // total steps since the game was first started, due to api limits this will have issus if the phone is restarted (true on android and ios)
     private int gold=0;
 
-    public TextMeshProUGUI permission_text;
+    
     public TextMeshProUGUI gold_text;
     public TextMeshProUGUI gold_per_step_text;
-    public TextMeshProUGUI base_step_value_text;
-
-    int _game_was_ran_before = 0; // indicates that this is the first time the player opens the game    
 
 
     ///  object the player buys - trees, orchards, forests
@@ -67,8 +62,6 @@ public class game_logic : MonoBehaviour
     
 
     private int gold_per_step = 1;
-    private int increment_per_click = 1;
-
 
     void Awake()
     {
@@ -86,11 +79,11 @@ public class game_logic : MonoBehaviour
 
         if (AndroidRuntimePermissions.CheckPermission("android.permission.ACTIVITY_RECOGNITION"))
         {            
-            permission_text.text = "has permission";
+            //permission_text.text = "has permission";
         }
         else
         {            
-            permission_text.text = "no permission";
+            //permission_text.text = "no permission";
         }
 
     }
@@ -104,8 +97,6 @@ public class game_logic : MonoBehaviour
         if (time_passed.TotalSeconds > 1)
         {            
             last_update_time = DateTime.Now; // Update lastUpdateTime for the next comparison
-            time_text.text = last_update_time.ToString();
-            steps_text.text = (AndroidStepCounter.current.stepCounter.ReadValue()-base_steps_value).ToString();
             UpdateStepsNumber();
             UpdateGui();
         }
@@ -128,8 +119,7 @@ public class game_logic : MonoBehaviour
         // there's no reason for it to ever return 0, so this line AndroidStepCounter.current.stepCounter.ReadValue()!=0 dodges the bug
         if (_initial_steps_value_was_set == false && AndroidStepCounter.current.stepCounter.ReadValue()!=0)
         {
-            base_steps_value = AndroidStepCounter.current.stepCounter.ReadValue();
-            base_step_value_text.text = base_steps_value.ToString();
+            base_steps_value = AndroidStepCounter.current.stepCounter.ReadValue();            
             _initial_steps_value_was_set = true;
             gold = -base_steps_value;
             steps_since_game_started = -base_steps_value;
@@ -141,14 +131,6 @@ public class game_logic : MonoBehaviour
             gold += (AndroidStepCounter.current.stepCounter.ReadValue() - prev_steps_value) * gold_per_step;
             prev_steps_value = AndroidStepCounter.current.stepCounter.ReadValue();
         }
-    }
-
-    //increment number test
-    public void incrementNum()
-    {
-        UpdateGoldPerStep();
-        gold+= increment_per_click;
-        UpdateGui();
     }
 
     private void OnApplicationPause(bool pauseStatus)
